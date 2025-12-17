@@ -9,6 +9,10 @@ A web interface for the Moondream3 vision-language model featuring image caption
 - **🔍 Object Detection**: Detect and localize specific objects with bounding boxes
 - **👆 Object Pointing**: Point to specific objects in your images
 
+## Model
+
+This application uses the `PierrunoYT/moondream3-preview` model from Hugging Face. The model will be automatically downloaded on first run.
+
 ## Requirements
 
 - Python 3.10+
@@ -119,8 +123,8 @@ Get your API key from the [Moondream Dashboard](https://moondream.ai).
 
 ## License
 
-See the [Moondream3 Model Card](https://huggingface.co/moondream/moondream3-preview) for license information.
+See the [Moondream3 Model Card](https://huggingface.co/PierrunoYT/moondream3-preview) for license information.
 
 ---
 
-*Powered by [Moondream3](https://huggingface.co/moondream/moondream3-preview) & [Gradio](https://gradio.app)*
+*Powered by [Moondream3](https://huggingface.co/PierrunoYT/moondream3-preview) & [Gradio](https://gradio.app)*

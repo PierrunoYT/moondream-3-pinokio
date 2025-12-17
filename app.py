@@ -66,7 +66,7 @@ def load_model():
         
         # Try loading without attn_implementation first
         model = AutoModelForCausalLM.from_pretrained(
-            "PierrunoYT/moondream3-preview",
+            "moondream/moondream3-preview",
             trust_remote_code=True,
             torch_dtype=dtype,
             device_map={"": device},

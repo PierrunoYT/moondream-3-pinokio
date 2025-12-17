@@ -38,7 +38,7 @@ def load_model():
     model = AutoModelForCausalLM.from_pretrained(
         "moondream/moondream3-preview",
         trust_remote_code=True,
-        torch_dtype=dtype,
+        dtype=dtype,
         device_map={"": device},
     )
     

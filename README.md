@@ -40,19 +40,28 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Abhängigkeiten installieren
+### 3. PyTorch installieren
+
+PyTorch muss separat installiert werden, da die Installation von deiner Hardware abhängt. Besuche [pytorch.org/get-started](https://pytorch.org/get-started/locally/) oder nutze einen der folgenden Befehle:
+
+```bash
+# CUDA 11.8
+pip install torch --index-url https://download.pytorch.org/whl/cu118
+
+# CUDA 12.1
+pip install torch --index-url https://download.pytorch.org/whl/cu121
+
+# CUDA 12.4
+pip install torch --index-url https://download.pytorch.org/whl/cu124
+
+# CPU only
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+### 4. Abhängigkeiten installieren
 
 ```bash
 pip install -r requirements.txt
-```
-
-**Hinweis für CUDA**: Stelle sicher, dass PyTorch mit der richtigen CUDA-Version installiert ist:
-```bash
-# Beispiel für CUDA 11.8
-pip install torch --index-url https://download.pytorch.org/whl/cu118
-
-# Beispiel für CUDA 12.1
-pip install torch --index-url https://download.pytorch.org/whl/cu121
 ```
 
 ## Verwendung / Usage

@@ -222,9 +222,18 @@ def point_objects(image, object_type):
         for point in points:
             x = int(point.get("x", 0) * width)
             y = int(point.get("y", 0) * height)
-            radius = 10
+            radius = 15
+            # Draw outer circle (red outline)
             draw.ellipse([x - radius, y - radius, x + radius, y + radius], 
-                        fill="blue", outline="white", width=2)
+                        outline="red", width=4)
+            # Draw inner filled circle (yellow)
+            inner_radius = 8
+            draw.ellipse([x - inner_radius, y - inner_radius, x + inner_radius, y + inner_radius], 
+                        fill="yellow", outline="red", width=2)
+            # Draw crosshair
+            line_length = 20
+            draw.line([x - line_length, y, x + line_length, y], fill="red", width=3)
+            draw.line([x, y - line_length, x, y + line_length], fill="red", width=3)
         
         return annotated, f"✓ Found {len(points)} point(s)."
     except Exception as e:

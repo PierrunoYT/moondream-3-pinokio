@@ -221,44 +221,19 @@ def point_objects(image, object_type):
         draw = ImageDraw.Draw(annotated)
         width, height = annotated.size
         
-        for i, point in enumerate(points, 1):
+        for point in points:
             x = int(point.get("x", 0) * width)
             y = int(point.get("y", 0) * height)
             
-            # Draw large crosshair first (very visible)
-            line_length = 40
-            draw.line([x - line_length, y, x + line_length, y], fill="red", width=6)
-            draw.line([x, y - line_length, x, y + line_length], fill="red", width=6)
-            
-            # Draw outer circle with thick border
-            radius = 25
+            # Draw simple blue circle like the official demo
+            radius = 20
+            # Outer circle (darker blue border)
             draw.ellipse([x - radius, y - radius, x + radius, y + radius], 
-                        outline="red", width=8)
-            
-            # Draw middle circle for extra visibility
-            mid_radius = 15
-            draw.ellipse([x - mid_radius, y - mid_radius, x + mid_radius, y + mid_radius], 
-                        outline="yellow", width=4)
-            
-            # Draw bright center dot
-            center_radius = 6
-            draw.ellipse([x - center_radius, y - center_radius, x + center_radius, y + center_radius], 
-                        fill="lime", outline="black", width=2)
-            
-            # Add numbered label with background
-            label = f"#{i}"
-            label_offset = 35
-            label_y_offset = 35
-            # Draw label background (bright yellow rectangle)
-            draw.rectangle([x + label_offset - 5, y - label_y_offset - 20, 
-                          x + label_offset + 30, y - label_y_offset + 5], 
-                          fill="yellow", outline="red", width=3)
-            # Draw label text (larger)
-            try:
-                font = ImageFont.truetype("arial.ttf", 20)
-            except:
-                font = ImageFont.load_default()
-            draw.text((x + label_offset, y - label_y_offset - 15), label, fill="red", font=font)
+                        outline="#0066CC", width=4)
+            # Inner circle (semi-transparent blue fill effect with lighter blue)
+            inner_radius = 16
+            draw.ellipse([x - inner_radius, y - inner_radius, x + inner_radius, y + inner_radius], 
+                        fill="#4DA6FF", outline="#0066CC", width=2)
         
         return annotated, f"✓ Found {len(points)} point(s)."
     except Exception as e:

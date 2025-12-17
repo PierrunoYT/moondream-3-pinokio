@@ -7,10 +7,17 @@ A web interface for Moondream3 vision-language model featuring:
 - Object Pointing
 """
 
+import os
+# Disable torch compile to avoid FlexAttention BlockMask compatibility issues
+os.environ["TORCH_COMPILE_DISABLE"] = "1"
+
 import gradio as gr
 import torch
 from transformers import AutoModelForCausalLM
 from PIL import Image, ImageDraw
+
+# Force eager mode for attention
+torch._dynamo.config.suppress_errors = True
 
 # Global model variable
 model = None
@@ -42,12 +49,9 @@ def load_model():
         device_map={"": device},
     )
     
-    # Compile for faster inference (optional, may not work on all systems)
-    try:
-        model.compile()
-        print("Model compiled successfully!")
-    except Exception as e:
-        print(f"Model compilation skipped: {e}")
+    # Note: model.compile() is disabled due to PyTorch compatibility issues
+    # with FlexAttention BlockMask. Inference will still work, just slower.
+    # To enable, upgrade/downgrade PyTorch to a compatible version (e.g., 2.5.1)
     
     return f"Model loaded successfully on {device}!"
 

@@ -1,5 +1,6 @@
 gradio>=5.50.0
-transformers>=4.44.0
+transformers
+tokenizers
 accelerate
 safetensors
 pillow

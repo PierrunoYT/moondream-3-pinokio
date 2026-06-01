@@ -92,6 +92,52 @@ The application will start at `http://127.0.0.1:7860`.
 - **Reasoning**: Enable/disable chain-of-thought reasoning in Q&A
 - **Max Objects**: Limit detected objects count in detection
 
+## API
+
+Once the server is running at `http://127.0.0.1:7860`, you can access the Gradio API programmatically.
+
+### JavaScript
+
+```javascript
+import { Client } from "@gradio/client";
+
+const client = await Client.connect("http://127.0.0.1:7860");
+
+// Image captioning
+const result = await client.predict("/caption", {
+  image: new Blob([fs.readFileSync("image.jpg")], { type: "image/jpeg" }),
+  length: "normal",
+  stream: false,
+});
+console.log(result.data);
+```
+
+### Python
+
+```python
+from gradio_client import Client
+
+client = Client("http://127.0.0.1:7860")
+
+# Image captioning
+result = client.predict(
+    image="image.jpg",
+    length="normal",
+    stream=False,
+    api_name="/caption"
+)
+print(result)
+```
+
+### cURL
+
+```bash
+# Check available API endpoints
+curl http://127.0.0.1:7860/info
+```
+
+> Full interactive API docs are available at `http://127.0.0.1:7860/?view=api` once the app is running.
+
 ## License
 
 See the [Moondream3 Model Card](https://huggingface.co/moondream/moondream3-preview) for license information.

@@ -69,7 +69,7 @@ module.exports = {
           text: "Start",
           href: "start.js",
         }, {
-          icon: "fa-solid fa-plug",
+          icon: "fa-solid fa-rotate",
           text: "Update",
           href: "update.js",
         }, {

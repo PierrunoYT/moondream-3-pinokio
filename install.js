@@ -1,15 +1,8 @@
 module.exports = {
+  requires: {
+    bundle: "ai"
+  },
   run: [
-    {
-      method: "script.start",
-      params: {
-        uri: "torch.js",
-        params: {
-          venv: "env",
-          path: "app",
-        }
-      }
-    },
     {
       method: "shell.run",
       params: {
@@ -19,6 +12,16 @@ module.exports = {
           "uv pip install -r requirements.txt"
         ],
       }
-    }
+    },
+    {
+      method: "script.start",
+      params: {
+        uri: "torch.js",
+        params: {
+          path: "app",
+          venv: "env",
+        }
+      }
+    },
   ]
 }

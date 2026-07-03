@@ -15,13 +15,18 @@ module.exports = {
       "next": null
     },
     // windows amd
+    // NOTE: torch-directml hard-pins torch==2.4.1, but Moondream3's model
+    // code unconditionally imports torch.nn.attention.flex_attention, which
+    // was only added in torch 2.5. DirectML is therefore incompatible with
+    // this model, so we install CPU-only torch instead (same as the CPU
+    // path below) to keep the app functional.
     {
       "when": "{{platform === 'win32' && gpu === 'amd'}}",
       "method": "shell.run",
       "params": {
         "venv": "{{args && args.venv ? args.venv : null}}",
         "path": "{{args && args.path ? args.path : '.'}}",
-        "message": "uv pip install torch-directml torchaudio torchvision numpy==1.26.4"
+        "message": "uv pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cpu"
       },
       "next": null
     },

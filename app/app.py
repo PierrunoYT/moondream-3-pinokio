@@ -30,11 +30,13 @@ try:
     BlockMask.__init__ = patched_init
     print("✓ Applied BlockMask patch for seq_lengths compatibility")
 except Exception as e:
+    import traceback
     print(f"⚠️ Could not patch BlockMask: {e}")
+    traceback.print_exc()
 
 import gradio as gr
 from transformers import AutoModelForCausalLM
-from PIL import Image, ImageDraw
+from PIL import ImageDraw
 
 model = None
 
@@ -88,6 +90,14 @@ def check_model():
     if model is None:
         return False, "Please load the model first by clicking 'Load Model'!"
     return True, None
+
+
+def _clamp01(value):
+    """Clamp a normalized coordinate into the valid [0, 1] range."""
+    try:
+        return max(0.0, min(1.0, float(value)))
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def build_settings(temperature, max_tokens):
@@ -204,10 +214,10 @@ def detect_objects(image, object_type, max_objects):
         width, height = annotated.size
 
         for obj in objects:
-            x_min = int(obj.get("x_min", 0) * width)
-            y_min = int(obj.get("y_min", 0) * height)
-            x_max = int(obj.get("x_max", 0) * width)
-            y_max = int(obj.get("y_max", 0) * height)
+            x_min = int(_clamp01(obj.get("x_min", 0)) * width)
+            y_min = int(_clamp01(obj.get("y_min", 0)) * height)
+            x_max = int(_clamp01(obj.get("x_max", 0)) * width)
+            y_max = int(_clamp01(obj.get("y_max", 0)) * height)
 
             draw.rectangle([x_min, y_min, x_max, y_max], outline="red", width=3)
             label = obj.get("label", object_type)
@@ -246,8 +256,8 @@ def point_objects(image, object_type):
         width, height = annotated.size
 
         for point in points:
-            x = int(point.get("x", 0) * width)
-            y = int(point.get("y", 0) * height)
+            x = int(_clamp01(point.get("x", 0)) * width)
+            y = int(_clamp01(point.get("y", 0)) * height)
 
             radius = 20
             draw.ellipse([x - radius, y - radius, x + radius, y + radius],

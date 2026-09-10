@@ -4,7 +4,7 @@ module.exports = {
   description: "A web interface for the Moondream3 vision-language model featuring image captioning, visual question answering, object detection, and object pointing.",
   icon: "icon.jpg",
   menu: async (kernel, info) => {
-    let installed = info.exists("env")
+    let installed = info.exists("app/env")
     let running = {
       install: info.running("install.js"),
       start: info.running("start.js"),

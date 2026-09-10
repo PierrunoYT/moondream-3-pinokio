@@ -4,9 +4,16 @@ Web interface for the Moondream3 vision-language model.
 """
 
 import os
+import threading
 import warnings
 
-os.environ["TORCH_COMPILE_DISABLE"] = "1"
+# torch.compile is opt-in: it needs a working C compiler / Triton and silently
+# costs minutes of warm-up when it half-works. Set MOONDREAM_COMPILE=1 to enable.
+COMPILE_ENABLED = os.environ.get("MOONDREAM_COMPILE", "0").lower() in ("1", "true", "yes")
+if not COMPILE_ENABLED:
+    # Must be set before torch is imported.
+    os.environ["TORCH_COMPILE_DISABLE"] = "1"
+
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import torch
@@ -39,6 +46,20 @@ from transformers import AutoModelForCausalLM
 from PIL import ImageDraw
 
 model = None
+_model_lock = threading.Lock()
+
+
+def select_device():
+    """Pick the best available device and matching dtype."""
+    if torch.cuda.is_available():
+        try:
+            print(f"CUDA available: {torch.cuda.get_device_name(0)}")
+        except Exception as e:  # driver present but device query failed
+            print(f"CUDA available (device name unavailable: {e})")
+        return "cuda", torch.bfloat16
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "mps", torch.float32
+    return "cpu", torch.float32
 
 
 def load_model():
@@ -47,16 +68,16 @@ def load_model():
     if model is not None:
         return "Model already loaded!"
 
-    if torch.cuda.is_available():
-        device = "cuda"
-        dtype = torch.bfloat16
-        print(f"CUDA available: {torch.cuda.get_device_name(0)}")
-    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        device = "mps"
-        dtype = torch.float32
-    else:
-        device = "cpu"
-        dtype = torch.float32
+    # Serialize concurrent "Load Model" clicks so the weights are only pulled once.
+    with _model_lock:
+        if model is not None:
+            return "Model already loaded!"
+        return _load_model_locked()
+
+
+def _load_model_locked():
+    global model
+    device, dtype = select_device()
 
     try:
         print(f"Loading Moondream3 on {device}...")
@@ -69,6 +90,12 @@ def load_model():
         )
 
         print("✓ Model loaded successfully!")
+
+        if not COMPILE_ENABLED:
+            return (
+                f"Model loaded on {device}!\n\n"
+                "Compilation disabled (set MOONDREAM_COMPILE=1 to enable)."
+            )
 
         try:
             print("Compiling model for optimized inference...")
@@ -133,7 +160,7 @@ def caption_image(image, length, temperature, max_tokens, stream):
             caption_stream = result.get("caption", result) if isinstance(result, dict) else result
             text = ""
             for chunk in caption_stream:
-                text += chunk
+                text += chunk if isinstance(chunk, str) else str(chunk)
                 yield text
         else:
             result = model.caption(image, **kwargs)
@@ -170,7 +197,7 @@ def answer_question(image, question, reasoning, temperature, max_tokens, stream)
             answer_stream = result.get("answer", result) if isinstance(result, dict) else result
             text = ""
             for chunk in answer_stream:
-                text += chunk
+                text += chunk if isinstance(chunk, str) else str(chunk)
                 yield text
         else:
             result = model.query(**kwargs)
@@ -213,17 +240,25 @@ def detect_objects(image, object_type, max_objects):
         draw = ImageDraw.Draw(annotated)
         width, height = annotated.size
 
+        drawn = 0
         for obj in objects:
-            x_min = int(_clamp01(obj.get("x_min", 0)) * width)
-            y_min = int(_clamp01(obj.get("y_min", 0)) * height)
-            x_max = int(_clamp01(obj.get("x_max", 0)) * width)
-            y_max = int(_clamp01(obj.get("y_max", 0)) * height)
+            x0 = int(_clamp01(obj.get("x_min", 0)) * width)
+            y0 = int(_clamp01(obj.get("y_min", 0)) * height)
+            x1 = int(_clamp01(obj.get("x_max", 0)) * width)
+            y1 = int(_clamp01(obj.get("y_max", 0)) * height)
+
+            # PIL raises when the box is given bottom-right first.
+            x_min, x_max = sorted((x0, x1))
+            y_min, y_max = sorted((y0, y1))
+            if x_max <= x_min or y_max <= y_min:
+                continue
 
             draw.rectangle([x_min, y_min, x_max, y_max], outline="red", width=3)
             label = obj.get("label", object_type)
-            draw.text((x_min, max(0, y_min - 20)), label, fill="red")
+            draw.text((x_min, max(0, y_min - 20)), str(label), fill="red")
+            drawn += 1
 
-        return annotated, f"✓ Detected {len(objects)} object(s)."
+        return annotated, f"✓ Detected {drawn} object(s)."
     except Exception as e:
         return image, f"Error: {e}"
 
@@ -287,7 +322,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
         load_btn = gr.Button("🚀 Load Model", variant="primary", scale=1)
         load_status = gr.Textbox(label="Status", value="Model not loaded", interactive=False, scale=3, lines=3)
 
-    load_btn.click(fn=load_model, outputs=load_status)
+    load_btn.click(fn=load_model, outputs=load_status, api_name="load_model")
 
     gr.Markdown("---")
 
@@ -309,6 +344,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
                 fn=caption_image,
                 inputs=[caption_image_input, caption_length, caption_temperature, caption_max_tokens, caption_stream],
                 outputs=caption_output,
+                api_name="caption",
             )
 
         with gr.TabItem("❓ Visual Q&A"):
@@ -329,6 +365,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
                 fn=answer_question,
                 inputs=[vqa_image_input, vqa_question, vqa_reasoning, vqa_temperature, vqa_max_tokens, vqa_stream],
                 outputs=vqa_output,
+                api_name="query",
             )
 
         with gr.TabItem("🔍 Object Detection"):
@@ -346,6 +383,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
                 fn=detect_objects,
                 inputs=[detect_image_input, detect_object_type, detect_max_objects],
                 outputs=[detect_image_output, detect_text_output],
+                api_name="detect",
             )
 
         with gr.TabItem("👆 Object Pointing"):
@@ -362,6 +400,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
                 fn=point_objects,
                 inputs=[point_image_input, point_object_type],
                 outputs=[point_image_output, point_text_output],
+                api_name="point",
             )
 
     gr.Markdown(
@@ -374,4 +413,14 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
 
 if __name__ == "__main__":
     print("Starting Moondream3...")
-    demo.launch(share=False)
+    demo.queue()
+    launch_kwargs = {
+        "server_name": os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1"),
+        "share": False,
+    }
+    # Leave the port unset unless asked for, so Gradio can fall forward to the
+    # next free port when 7860 is already taken by another app.
+    port = os.environ.get("GRADIO_SERVER_PORT")
+    if port:
+        launch_kwargs["server_port"] = int(port)
+    demo.launch(**launch_kwargs)

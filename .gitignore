@@ -22,3 +22,6 @@ env/
 commit_msg.txt
 *.log
 .DS_Store
+
+# Agent / tooling runtimes
+.open-edit/

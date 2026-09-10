@@ -22,14 +22,26 @@ This application uses the official [`moondream/moondream3-preview`](https://hugg
 
 ## Installation
 
-### 1. Clone Repository
+### Pinokio (recommended)
+
+This repository is a [Pinokio](https://pinokio.computer) script. Add it as a custom
+script in Pinokio and click **Install** — Pinokio creates the virtual environment at
+`app/env`, installs `app/requirements.txt`, and selects the right PyTorch build for
+your platform and GPU. Then click **Start** and **Open Web UI**.
+
+Other menu entries: **Update** (git pull + reinstall dependencies), **Save Disk
+Space** (deduplicate library files), and **Reset** (delete the environment).
+
+### Manual installation
+
+#### 1. Clone Repository
 
 ```bash
 git clone https://github.com/PierrunoYT/MoonDream-3-Pinokio.git
 cd MoonDream-3-Pinokio
 ```
 
-### 2. Create Virtual Environment
+#### 2. Create Virtual Environment
 
 ```bash
 python -m venv .venv
@@ -44,7 +56,7 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install PyTorch
+#### 3. Install PyTorch
 
 Visit [pytorch.org/get-started](https://pytorch.org/get-started/locally/) or use:
 
@@ -56,7 +68,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu128
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
-### 4. Install Dependencies
+#### 4. Install Dependencies
 
 ```bash
 pip install -r app/requirements.txt
@@ -92,6 +104,14 @@ The application will start at `http://127.0.0.1:7860`.
 - **Reasoning**: Enable/disable chain-of-thought reasoning in Q&A
 - **Max Objects**: Limit detected objects count in detection
 
+### Environment Variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MOONDREAM_COMPILE` | `0` | Set to `1` to enable `torch.compile` optimization. Requires a working compiler toolchain and adds a long first-run warm-up. |
+| `GRADIO_SERVER_NAME` | `127.0.0.1` | Address to bind to. Use `0.0.0.0` to expose on the local network. |
+| `GRADIO_SERVER_PORT` | unset | Pin a port. When unset, Gradio starts at 7860 and moves to the next free port if it is taken. |
+
 ## API
 
 Once the server is running at `http://127.0.0.1:7860`, you can access the Gradio API programmatically.
@@ -100,34 +120,42 @@ Once the server is running at `http://127.0.0.1:7860`, you can access the Gradio
 
 ```javascript
 import { Client } from "@gradio/client";
+import fs from "node:fs";
 
 const client = await Client.connect("http://127.0.0.1:7860");
 
-// Image captioning
-const result = await client.predict("/caption", {
-  image: new Blob([fs.readFileSync("image.jpg")], { type: "image/jpeg" }),
-  length: "normal",
-  stream: false,
-});
+// The model must be loaded once before any other endpoint is called.
+await client.predict("/load_model", []);
+
+// Image captioning: [image, length, temperature, max_tokens, stream]
+const image = new Blob([fs.readFileSync("image.jpg")], { type: "image/jpeg" });
+const result = await client.predict("/caption", [image, "normal", 0, 0, false]);
 console.log(result.data);
 ```
 
 ### Python
 
 ```python
-from gradio_client import Client
+from gradio_client import Client, handle_file
 
 client = Client("http://127.0.0.1:7860")
 
+# The model must be loaded once before any other endpoint is called.
+print(client.predict(api_name="/load_model"))
+
 # Image captioning
 result = client.predict(
-    image="image.jpg",
-    length="normal",
-    stream=False,
-    api_name="/caption"
+    handle_file("image.jpg"),  # image
+    "normal",                  # length: short | normal | long
+    0,                         # temperature (0 = model default)
+    0,                         # max_tokens (0 = model default)
+    False,                     # stream
+    api_name="/caption",
 )
 print(result)
 ```
+
+Available endpoints: `/load_model`, `/caption`, `/query`, `/detect`, `/point`.
 
 ### cURL
 

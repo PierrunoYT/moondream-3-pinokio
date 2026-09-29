@@ -5,15 +5,7 @@ module.exports = {
       message: "git pull"
     }
   }, {
-    method: "shell.run",
-    params: {
-      venv: "env",
-      path: "app",
-      message: [
-        "uv pip install -r requirements.txt"
-      ]
-    }
-  }, {
+    // Torch before requirements, same as install.js.
     method: "script.start",
     params: {
       uri: "torch.js",
@@ -21,6 +13,15 @@ module.exports = {
         path: "app",
         venv: "env",
       }
+    }
+  }, {
+    method: "shell.run",
+    params: {
+      venv: "env",
+      path: "app",
+      message: [
+        "uv pip install -r requirements.txt"
+      ]
     }
   }]
 }

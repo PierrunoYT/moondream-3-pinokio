@@ -109,6 +109,7 @@ The application will start at `http://127.0.0.1:7860`.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `MOONDREAM_COMPILE` | `0` | Set to `1` to enable `torch.compile` optimization. Requires a working compiler toolchain and adds a long first-run warm-up. |
+| `MOONDREAM_REVISION` | pinned commit | Hugging Face revision (commit, branch, or tag) of `moondream/moondream3-preview` to load. The model ships custom code that runs locally, so the app pins a known commit by default; set to `main` to follow upstream. |
 | `GRADIO_SERVER_NAME` | `127.0.0.1` | Address to bind to. Use `0.0.0.0` to expose on the local network. |
 | `GRADIO_SERVER_PORT` | unset | Pin a port. When unset, Gradio starts at 7860 and moves to the next free port if it is taken. |
 

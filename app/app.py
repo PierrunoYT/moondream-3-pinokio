@@ -53,6 +53,12 @@ _model_lock = threading.Lock()
 # Every event that touches the model shares this queue slot to run one at a time.
 MODEL_CONCURRENCY_ID = "moondream_model"
 
+MODEL_ID = "moondream/moondream3-preview"
+# trust_remote_code runs Python from the model repo, so pin the commit instead of
+# following main: upstream changes can't silently alter or break the app.
+# Set MOONDREAM_REVISION (e.g. "main") to opt into a different revision.
+MODEL_REVISION = os.environ.get("MOONDREAM_REVISION", "5112966d1a723413b1c9a1e8bea272b72e647b35")
+
 
 def select_device():
     """Pick the best available device and matching dtype."""
@@ -88,7 +94,8 @@ def _load_model_locked():
         print(f"Loading Moondream3 on {device}...")
 
         model = AutoModelForCausalLM.from_pretrained(
-            "moondream/moondream3-preview",
+            MODEL_ID,
+            revision=MODEL_REVISION,
             trust_remote_code=True,
             dtype=dtype,
             device_map={"": device},

@@ -48,6 +48,11 @@ from PIL import ImageDraw
 model = None
 _model_lock = threading.Lock()
 
+# The model keeps a single shared KV cache, so two requests running at once
+# (e.g. a caption and a query from different tabs or users) corrupt each other.
+# Every event that touches the model shares this queue slot to run one at a time.
+MODEL_CONCURRENCY_ID = "moondream_model"
+
 
 def select_device():
     """Pick the best available device and matching dtype."""
@@ -322,7 +327,8 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
         load_btn = gr.Button("🚀 Load Model", variant="primary", scale=1)
         load_status = gr.Textbox(label="Status", value="Model not loaded", interactive=False, scale=3, lines=3)
 
-    load_btn.click(fn=load_model, outputs=load_status, api_name="load_model")
+    load_btn.click(fn=load_model, outputs=load_status, api_name="load_model",
+                   concurrency_id=MODEL_CONCURRENCY_ID)
 
     gr.Markdown("---")
 
@@ -345,6 +351,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
                 inputs=[caption_image_input, caption_length, caption_temperature, caption_max_tokens, caption_stream],
                 outputs=caption_output,
                 api_name="caption",
+                concurrency_id=MODEL_CONCURRENCY_ID,
             )
 
         with gr.TabItem("❓ Visual Q&A"):
@@ -366,6 +373,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
                 inputs=[vqa_image_input, vqa_question, vqa_reasoning, vqa_temperature, vqa_max_tokens, vqa_stream],
                 outputs=vqa_output,
                 api_name="query",
+                concurrency_id=MODEL_CONCURRENCY_ID,
             )
 
         with gr.TabItem("🔍 Object Detection"):
@@ -384,6 +392,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
                 inputs=[detect_image_input, detect_object_type, detect_max_objects],
                 outputs=[detect_image_output, detect_text_output],
                 api_name="detect",
+                concurrency_id=MODEL_CONCURRENCY_ID,
             )
 
         with gr.TabItem("👆 Object Pointing"):
@@ -401,6 +410,7 @@ with gr.Blocks(title="Moondream3 Vision AI", theme=gr.themes.Soft()) as demo:
                 inputs=[point_image_input, point_object_type],
                 outputs=[point_image_output, point_text_output],
                 api_name="point",
+                concurrency_id=MODEL_CONCURRENCY_ID,
             )
 
     gr.Markdown(

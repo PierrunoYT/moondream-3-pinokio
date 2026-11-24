@@ -19,28 +19,6 @@ warnings.filterwarnings("ignore", category=UserWarning)
 import torch
 print(f"PyTorch version: {torch.__version__}")
 
-# Monkey-patch BlockMask to add missing seq_lengths attribute
-try:
-    from torch.nn.attention.flex_attention import BlockMask
-    original_init = BlockMask.__init__
-
-    def patched_init(self, *args, **kwargs):
-        original_init(self, *args, **kwargs)
-        if not hasattr(self, 'seq_lengths'):
-            if hasattr(self, 'shape'):
-                self.seq_lengths = self.shape
-            elif hasattr(self, 'kv_num_blocks'):
-                self.seq_lengths = (self.kv_num_blocks[-1] * 128, self.kv_num_blocks[-1] * 128)
-            else:
-                self.seq_lengths = None
-
-    BlockMask.__init__ = patched_init
-    print("✓ Applied BlockMask patch for seq_lengths compatibility")
-except Exception as e:
-    import traceback
-    print(f"⚠️ Could not patch BlockMask: {e}")
-    traceback.print_exc()
-
 import gradio as gr
 from transformers import AutoModelForCausalLM
 from PIL import ImageDraw
@@ -110,14 +88,21 @@ def _load_model_locked():
             )
 
         try:
+            # HfMoondream does not override compile(), so model.compile() resolves to
+            # torch.nn.Module.compile and never touches the inference paths. The
+            # warm-up compile lives on the inner MoondreamModel.
             print("Compiling model for optimized inference...")
-            model.compile()
+            model.model.compile()
             print("✓ Model compiled successfully!")
             return f"Model loaded and compiled successfully on {device}!\n\nRunning with full optimization."
         except Exception as compile_error:
+            # compile() swaps in compiled callables as instance attributes before
+            # warming them up; drop them so inference falls back to the eager methods
+            # instead of retrying the failing compile on every request.
+            for name in ("_vis_enc", "_decode_one_tok"):
+                model.model.__dict__.pop(name, None)
             print(f"⚠️ Compilation failed: {compile_error}")
             return f"Model loaded on {device}!\n\n⚠️ Compilation skipped: {str(compile_error)[:100]}\n\nModel will work but may be slower."
-
     except Exception as e:
         error_msg = str(e)
         print(f"Error: {error_msg}")

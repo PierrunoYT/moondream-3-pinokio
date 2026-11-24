@@ -161,8 +161,20 @@ Available endpoints: `/load_model`, `/caption`, `/query`, `/detect`, `/point`.
 ### cURL
 
 ```bash
-# Check available API endpoints
-curl http://127.0.0.1:7860/info
+# List available API endpoints and their parameters
+curl http://127.0.0.1:7860/gradio_api/info
+
+# Calls are two-step: POST returns an event id, GET streams the result.
+# Load the model once first.
+EVENT_ID=$(curl -s -X POST http://127.0.0.1:7860/gradio_api/call/load_model \
+  -H "Content-Type: application/json" -d '{"data": []}' | jq -r .event_id)
+curl -N http://127.0.0.1:7860/gradio_api/call/load_model/$EVENT_ID
+
+# Text-only query: [image, question, reasoning, temperature, max_tokens, stream]
+EVENT_ID=$(curl -s -X POST http://127.0.0.1:7860/gradio_api/call/query \
+  -H "Content-Type: application/json" \
+  -d '{"data": [null, "What is the capital of France?", false, 0, 0, false]}' | jq -r .event_id)
+curl -N http://127.0.0.1:7860/gradio_api/call/query/$EVENT_ID
 ```
 
 > Full interactive API docs are available at `http://127.0.0.1:7860/?view=api` once the app is running.
